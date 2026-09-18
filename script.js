@@ -3,7 +3,8 @@
 // global variables
 let port; // serial port object
 let reader; // stream reader for serial data
-const dataPoints = []; // store distance data
+const position = []; // store position data as array of arrays (pan, tilt)
+const distance = []; // store distance data as list of floats
 
 // set up event listners to connect to arduino on page load
 window.addEventListener('DOMContentLoaded', () => {
@@ -20,7 +21,6 @@ async function connectToArduino() {
 
         // open port with correct baud rate
         await port.open({ baudRate: 9600 });
-        console.log("connected");
         statusText.innerHTML = "connected";
         
         // start data collection
@@ -39,7 +39,10 @@ async function readSerialData() {
     const inputStream = decoder.readable;
     reader = inputStream.getReader();
 
+    // create variables for dom objects
+    const statusText = document.getElementById("status");
     const outputText = document.getElementById("data");
+    const debuggingText = document.getElementById("debugging");
 
     // loop through and read data until port closes
     while (true) {
@@ -51,9 +54,23 @@ async function readSerialData() {
 
         // interpret data
         lines.forEach(line => {
-            console.log(line.trim())
-            outputText.innerHTML = line.trim();
-            // PROCESS DATA LATER
+            const reading = line.trim();
+            if (reading[0] === '!') {
+                //it's for debugging; show output
+                debuggingText.innerHTML = reading.slice(1,reading.length);
+            } else if (reading.split(',').length === 3) {
+                // it's numerical data; add to arrays
+                const data = reading.split(',');
+                const currentPosition = [];
+                for (let i = 0; i < 2; i++)
+                    currentPosition.push(parseInt(data[i]));
+                position.push(currentPosition);
+                distance.push(parseFloat(data[2]));
+                outputText.innerHTML = data[data.length-1];
+            } else {
+                // it's a status message; update status
+                statusText.innerHTML = reading;
+            }
         });
     }
 }
@@ -66,6 +83,7 @@ async function disconnectFromArduino() {
     }
 
     // clear chart data
-    dataPoints.length = 0;
-    document.getElementById("disconnected");
+    document.getElementById("status").innerHTML = "disconnected";
+    document.getElementById("data").innerHTML = position.toString();
+    document.getElementById("debugging").innerHTML = distance.toString();
 }
