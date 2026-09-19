@@ -10,7 +10,6 @@ const distance = []; // store distance data as list of floats
 window.addEventListener('DOMContentLoaded', () => {
     document.getElementById("start").addEventListener('click', connectToArduino);
     document.getElementById("stop").addEventListener('click', disconnectFromArduino);
-    plotSensorData();
 });
 
 // connect to Arduino with web serial api
@@ -39,7 +38,8 @@ async function disconnectFromArduino() {
         await port.close(); // close serial port
     }
 
-    // clear chart data
+    // update UI
+    plotSensorData();
     document.getElementById("status").innerHTML = "disconnected";
     document.getElementById("data").innerHTML = position.toString();
     document.getElementById("debugging").innerHTML = distance.toString();
@@ -75,10 +75,7 @@ async function readSerialData() {
             } else if (reading.split(',').length === 3) {
                 // it's numerical data; add to arrays
                 const data = reading.split(',');
-                const currentPosition = [];
-                for (let i = 0; i < 2; i++)
-                    currentPosition.push(parseInt(data[i]));
-                position.push(currentPosition);
+                position.push([parseInt(data[0]), parseInt(data[1])-90]);
                 distance.push(parseFloat(data[2]));
                 outputText.innerHTML = data[data.length-1];
             } else {
@@ -89,21 +86,35 @@ async function readSerialData() {
     }
 }
 
+// use angle and distance readings to calculate coordinates
+function calculatePosition(angles, distance) {
+    const anglesRadians = [];
+    angles.forEach(angle => anglesRadians.push(angle*Math.PI/180));
+    const yPan = distance * Math.sin(anglesRadians[0]);
+
+    const x = distance * Math.cos(anglesRadians[0]);
+    const y = yPan * Math.cos(anglesRadians[1]);
+    const z = yPan * Math.sin(anglesRadians[1]);
+
+    return [x,y,z];
+}
+
 // plot graph of data using plotly.js
 function plotSensorData() {
-    const statusText = document.getElementById("status");
-
-    // writing sample data
+    // writing position data to arrays
     const xValues = [];
     const yValues = [];
     const zValues = [];
-    for (let i = 0; i < 10; i += 0.5) {
-        xValues.push(i);
-        yValues.push(Math.sin(i))
-        zValues.push(0);
+    for (let i = 0; i < distance.length; i++) {
+        if(distance[i] && position[i][0] && position[i][1]) {
+            const coords = calculatePosition(position[i], distance[i]);
+            xValues.push(coords[0]);
+            yValues.push(coords[1]);
+            zValues.push(coords[2]);
+        }
     }
 
-    // displaying 2d plot with plotly
+    // displaying 3d plot with plotly
     const data = [{
         x: xValues,
         y: yValues,
