@@ -10,6 +10,7 @@ const distance = []; // store distance data as list of floats
 window.addEventListener('DOMContentLoaded', () => {
     document.getElementById("start").addEventListener('click', connectToArduino);
     document.getElementById("stop").addEventListener('click', disconnectFromArduino);
+    plotSensorData();
 });
 
 // connect to Arduino with web serial api
@@ -29,6 +30,19 @@ async function connectToArduino() {
         console.error('Connection error: ' + err);
         statusText.innerHTML = "connection failure: " + err;
     }
+}
+
+// disconnect from Arduino
+async function disconnectFromArduino() {
+    if (reader) {
+        await reader.cancel(); // stop reading data
+        await port.close(); // close serial port
+    }
+
+    // clear chart data
+    document.getElementById("status").innerHTML = "disconnected";
+    document.getElementById("data").innerHTML = position.toString();
+    document.getElementById("debugging").innerHTML = distance.toString();
 }
 
 // CONTINUOUSLY read and interpret data from serial port
@@ -75,15 +89,35 @@ async function readSerialData() {
     }
 }
 
-// disconnect from Arduino
-async function disconnectFromArduino() {
-    if (reader) {
-        await reader.cancel(); // stop reading data
-        await port.close(); // close serial port
+// plot graph of data using plotly.js
+function plotSensorData() {
+    const statusText = document.getElementById("status");
+
+    // writing sample data
+    const xValues = [];
+    const yValues = [];
+    const zValues = [];
+    for (let i = 0; i < 10; i += 0.5) {
+        xValues.push(i);
+        yValues.push(Math.sin(i))
+        zValues.push(0);
     }
 
-    // clear chart data
-    document.getElementById("status").innerHTML = "disconnected";
-    document.getElementById("data").innerHTML = position.toString();
-    document.getElementById("debugging").innerHTML = distance.toString();
+    // displaying 2d plot with plotly
+    const data = [{
+        x: xValues,
+        y: yValues,
+        z: zValues,
+        mode: "markers",
+        marker: {
+            size: 5,
+        },
+        type: "scatter3d"
+    }];
+    const layout = {
+        title: {
+            text: "Scanned Location Data"
+        }
+    };
+    Plotly.newPlot('plot', data, layout);
 }
