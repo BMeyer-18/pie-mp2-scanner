@@ -22,7 +22,9 @@ async function connectToArduino() {
         // open port with correct baud rate
         await port.open({ baudRate: 9600 });
         statusText.innerHTML = "connected";
-        
+        position = [];
+        distance = [];
+
         // start data collection
         await readSerialData();
     } catch (err) {
