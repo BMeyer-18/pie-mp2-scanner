@@ -5,12 +5,16 @@
 #define TILT_SERVO_PIN 12
 #define SCANNER_PIN A0
 
-#define SERVO_DELAY 4 // ms/degree. Spec says 2.8, this gives slowdown/settle time.
+#define SERVO_DELAY_FULL 300 // ms, include slowdown/settle time.
+#define SERVO_DELAY_STEP 50 // ms
 #define NEAR_CALIB_CM 30.0 // how far away the near calibration point is
 #define FAR_CALIB_CM 60.0 // how far away the far calibration point is
 
 #define SCAN_RANGE_PAN 45 // how many degrees of space to scan in pan
-#define SCAN_RANGE_TILT 45 // ^^     ^^        ^^          ^^   in tilt
+#define SCAN_RANGE_TILT 45 // how many degrees of space to scan in tilt
+#define SCAN_STEP_SIZE 2 // how many degrees to step
+#define SCAN_OFFSET_PAN 90 // where to center the scan, in pan
+#define SCAN_OFFSET_TILT 110 // where to center the scan, in tilt
 
 float m; // calibration constants
 float b;
@@ -22,7 +26,7 @@ float getDist(uint16_t voltage) {
   // use the calibration data to return a distance from a voltage
   // note: "voltage" is a misnomer throughout this code, it's actually ADC counts, so V*1024/5
   // but calling it "voltage" makes it easier to reason about
-  return m/(b-(float)voltage);
+  return m/((float)voltage-b);
 }
 
 void setup() {
@@ -41,15 +45,23 @@ void setup() {
   Serial.println("CALIBRATING");
   // move to the position to see the 30cm plate of the calibration object 
   panServo.write(90);
-  tiltServo.write(70);
-  delay(90*SERVO_DELAY); // wait for servos to settle
+  tiltServo.write(90);
+  delay(SERVO_DELAY_FULL); // wait for servos to settle
 
   // OPT: use the average of several measurements to reduce noise
   float calibVoltageNear = (float)analogRead(SCANNER_PIN);
+  // wait for button press
+  while(digitalRead(BUTTON_PIN) == HIGH) {}
   // move to the position to see the 60cm plate of the calibration object
-  tiltServo.write(100);
-  delay(30*SERVO_DELAY); // wait for servos to settle
+  tiltServo.write(110);
+  Serial.println("!moving to far calib pos...");
+  delay(SERVO_DELAY_FULL); // wait for servos to settle
   float calibVoltageFar = (float)analogRead(SCANNER_PIN);
+
+  Serial.print("!Calbiration readings: Near: ");
+  Serial.print(calibVoltageNear);
+  Serial.print(", far: ");
+  Serial.println(calibVoltageFar);
 
   // now it's Fun Math Time
   // per the datasheet, the output voltage is proportional to the reciprocal of the distance
@@ -61,11 +73,11 @@ void setup() {
   // solve V(r) for d:
   // V = m/d+b
   // V-b=m/d
-  // d = m/(b-V)
+  // d = m/(V-b)
   // so now we can find m and b from the calibration data:
-  float m = (calibVoltageFar - calibVoltageNear)/((1/FAR_CALIB_CM)-(1/NEAR_CALIB_CM)); // slope formula
+  m = (calibVoltageFar - calibVoltageNear)/((1/FAR_CALIB_CM)-(1/NEAR_CALIB_CM)); // slope formula
   // given a point, b = V - m*d
-  float b = calibVoltageNear - m * (1/NEAR_CALIB_CM);
+  b = calibVoltageNear - m * (1/NEAR_CALIB_CM);
   // now we know what d(V) is!
   // tell the computer about it
   Serial.print("!Calibration: m=");
@@ -85,14 +97,14 @@ void setup() {
   // move to initial position
   tiltServo.write(90-SCAN_RANGE_TILT/2);
   panServo.write(90-SCAN_RANGE_PAN/2);
-  delay(SCAN_RANGE_PAN/2*SERVO_DELAY);
+  delay(SERVO_DELAY_FULL);
 
-  for(uint16_t tilt = 90-SCAN_RANGE_TILT/2; tilt < 90+SCAN_RANGE_TILT/2; tilt++){
+  for(uint16_t tilt = -SCAN_RANGE_TILT/2 + SCAN_OFFSET_TILT; tilt < SCAN_RANGE_TILT/2 + SCAN_OFFSET_TILT; tilt+=SCAN_STEP_SIZE){
     // OPT: pan backwards every other line to reduce travel time
-    for(uint16_t pan = 90-SCAN_RANGE_PAN/2; tilt < 90+SCAN_RANGE_PAN/2; pan++){
+    for(uint16_t pan = -SCAN_RANGE_PAN/2 + SCAN_OFFSET_PAN; pan < SCAN_RANGE_PAN/2 + SCAN_OFFSET_PAN; pan+=SCAN_STEP_SIZE){
       // start heading to the next location
       panServo.write(pan);
-      delay(SERVO_DELAY);
+      delay(SERVO_DELAY_STEP);
 
       // get reading
       uint16_t reading = analogRead(SCANNER_PIN);
@@ -102,11 +114,12 @@ void setup() {
       Serial.print(pan);
       Serial.print(",");
       Serial.print(tilt);
-      Serial.print(,);
+      Serial.print(",");
       Serial.println(distance);
     }
     tiltServo.write(tilt);
-    delay(SERVO_DELAY*SCAN_RANGE_PAN);
+    panServo.write(SCAN_RANGE_PAN/2 + SCAN_OFFSET_PAN);
+    delay(SERVO_DELAY_FULL);
   }
 }
 
