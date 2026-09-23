@@ -3,8 +3,8 @@
 // global variables
 let port; // serial port object
 let reader; // stream reader for serial data
-const position = []; // store position data as array of arrays (pan, tilt)
-const distance = []; // store distance data as list of floats
+let position = []; // store position data as array of arrays (pan, tilt)
+let distance = []; // store distance data as list of floats
 
 // set up event listners to connect to arduino on page load
 window.addEventListener('DOMContentLoaded', () => {
@@ -37,14 +37,7 @@ async function connectToArduino() {
 async function disconnectFromArduino() {
     if (reader) {
         await reader.cancel(); // stop reading data
-        await port.close(); // close serial port
     }
-
-    // update UI
-    plotSensorData();
-    document.getElementById("status").innerHTML = "disconnected";
-    document.getElementById("data").innerHTML = position.toString();
-    document.getElementById("debugging").innerHTML = distance.toString();
 }
 
 // CONTINUOUSLY read and interpret data from serial port
@@ -61,12 +54,29 @@ async function readSerialData() {
     const debuggingText = document.getElementById("debugging");
 
     // loop through and read data until port closes
+    let currentLine = "";
     while (true) {
         const {value, done} = await reader.read();
-        if (done) break; // exit loop when port closes
+        if (done) {
+            // we disconnected
+            // plot the data that we have
+            // update UI
+            plotSensorData();
+            document.getElementById("status").innerHTML = "disconnected";
+            document.getElementById("data").innerHTML = position.toString();
+            document.getElementById("debugging").innerHTML = distance.toString();
+            break;
+        }; // exit loop when port closes
+
+        currentLine += value;
+        if(!currentLine.includes('\n')){
+            continue; // wait to progress until we've gotten a completed line
+        }
 
         // read incoming data (split by \n, filter whitespace)
-        const lines = value.split('\n').filter(line => line.trim() !== '');
+        const lines = currentLine.split('\n').filter(line => line.trim() !== '');
+        console.log(`Got serial data: ${lines}`)
+        currentLine = ""; // reset for the next message
 
         // interpret data
         lines.forEach(line => {
@@ -77,8 +87,9 @@ async function readSerialData() {
             } else if (reading.split(',').length === 3) {
                 // it's numerical data; add to arrays
                 const data = reading.split(',');
+                const dist = parseFloat(data[2])
                 position.push([parseInt(data[0]), parseInt(data[1])-90]);
-                distance.push(parseFloat(data[2]));
+                distance.push(Math.abs(dist) > 100 ? 100 : dist);
                 outputText.innerHTML = data[data.length-1];
             } else {
                 // it's a status message; update status

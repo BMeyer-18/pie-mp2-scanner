@@ -102,7 +102,7 @@ void setup() {
       Serial.print(pan);
       Serial.print(",");
       Serial.print(tilt);
-      Serial.print(,);
+      Serial.print(",");
       Serial.println(distance);
     }
     tiltServo.write(tilt);
