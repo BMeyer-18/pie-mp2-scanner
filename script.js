@@ -112,6 +112,11 @@ function calculatePosition(angles, distance) {
 
 // plot graph of data using plotly.js
 function plotSensorData() {
+    // check that we have enough data
+    if (xValues.length < 5 || yValues.length < 5 || zValues.length < 5){
+        document.getElementById("status").innerHTML = "Not enough data! Try again."
+    }
+
     // writing position data to arrays
     const xValues = [];
     const yValues = [];
