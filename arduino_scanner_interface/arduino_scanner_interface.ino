@@ -17,14 +17,14 @@
 #define SCAN_OFFSET_TILT 105 // where to center the scan, in tilt
 
 float m = 10620.0; // calibration constants
-float b = 9.0;
+float b = 9.0; // these were found previously, but can be updated w/ the calibration routine
 
 Servo panServo;
 Servo tiltServo;
 
 float getDist(uint16_t voltage) {
   // use the calibration data to return a distance from a voltage
-  // note: "voltage" is a misnomer throughout this code, it's actually ADC counts, so V*1024/5
+  // note: "voltage" is a misnomer throughout this code, it's actually ADC counts, so it's V*1024/5
   // but calling it "voltage" makes it easier to reason about
   return m/((float)voltage-b);
 }
@@ -34,10 +34,13 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   panServo.attach(PAN_SERVO_PIN);
   tiltServo.attach(TILT_SERVO_PIN);
-  pinMode(LED_BUILTIN, OUTPUT);
+  // move to rest position
+  tiltServo.write(95);
+  panServo.write(SCAN_OFFSET_PAN);
+
   Serial.begin(9600);
 
-  bool calibrationMode = digitalRead(BUTTON_PIN) == LOW; // calibrate if we boot with button held down
+  bool calibrationMode = digitalRead(BUTTON_PIN) == LOW; // recalibrate if we boot with button held down
   if (calibrationMode) {
     panServo.write(SCAN_OFFSET_PAN);
     tiltServo.write(90);
@@ -93,12 +96,21 @@ void setup() {
   Serial.println("READY - PRESS BUTTON TO BEGIN");
 
   // wait for button press to start scan
-  while(digitalRead(BUTTON_PIN) == HIGH) {}
+  while(digitalRead(BUTTON_PIN) == HIGH) {
+    // while we're waiting, print the current distance reading
+    // this allows the user to confirm the calibration if they wish
+    uint16_t reading = analogRead(SCANNER_PIN);
+    float distance = getDist(reading);
+    Serial.print("READY - PRESS BUTTON TO BEGIN - ");
+    Serial.print(distance);
+    Serial.println("cm");
+    delay(75);
+  }
 
   // scan time!
   // move to initial position
-  tiltServo.write(90-SCAN_RANGE_TILT/2);
-  panServo.write(90-SCAN_RANGE_PAN/2);
+  tiltServo.write(-SCAN_RANGE_TILT/2 + SCAN_OFFSET_TILT);
+  panServo.write(-SCAN_RANGE_PAN/2 + SCAN_OFFSET_PAN);
   delay(SERVO_DELAY_FULL);
 
   for(uint16_t tilt = -SCAN_RANGE_TILT/2 + SCAN_OFFSET_TILT; tilt < SCAN_RANGE_TILT/2 + SCAN_OFFSET_TILT; tilt+=SCAN_STEP_SIZE){
@@ -123,6 +135,7 @@ void setup() {
     panServo.write(SCAN_RANGE_PAN/2 + SCAN_OFFSET_PAN);
     delay(SERVO_DELAY_FULL);
   }
+  Serial.println("SCAN COMPLETE");
 }
 
 void loop() {
