@@ -87,10 +87,12 @@ async function readSerialData() {
             } else if (reading.split(',').length === 3) {
                 // it's numerical data; add to arrays
                 const data = reading.split(',');
-                const dist = parseFloat(data[2])
-                position.push([parseInt(data[0]), parseInt(data[1])-90]);
-                distance.push(Math.abs(dist) > 100 ? 100 : dist);
-                outputText.innerHTML = data[data.length-1];
+                const dist = parseFloat(data[2]);
+                if (dist >= 0 && dist < 100) {
+                    position.push([parseInt(data[0]), parseInt(data[1])-90]);
+                    distance.push(Math.abs(dist) > 100 ? 100 : dist);
+                    outputText.innerHTML = data[data.length-1];
+                }
             } else {
                 // it's a status message; update status
                 statusText.innerHTML = reading;
