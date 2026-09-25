@@ -50,7 +50,6 @@ async function readSerialData() {
 
     // create variables for dom objects
     const statusText = document.getElementById("status");
-    const outputText = document.getElementById("data");
     const debuggingText = document.getElementById("debugging");
 
     // loop through and read data until port closes
@@ -62,9 +61,7 @@ async function readSerialData() {
             // plot the data that we have
             // update UI
             plotSensorData();
-            document.getElementById("status").innerHTML = "disconnected";
-            document.getElementById("data").innerHTML = position.toString();
-            document.getElementById("debugging").innerHTML = distance.toString();
+            statusText.innerHTML = "disconnected";
             break;
         }; // exit loop when port closes
 
@@ -91,7 +88,6 @@ async function readSerialData() {
                 if (dist >= 0 && dist < 100) {
                     position.push([parseInt(data[0]), parseInt(data[1])-90]);
                     distance.push(Math.abs(dist) > 100 ? 100 : dist);
-                    outputText.innerHTML = data[data.length-1];
                 }
             } else {
                 // it's a status message; update status
