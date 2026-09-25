@@ -113,38 +113,38 @@ function calculatePosition(angles, distance) {
 // plot graph of data using plotly.js
 function plotSensorData() {
     // check that we have enough data
-    if (xValues.length < 5 || yValues.length < 5 || zValues.length < 5){
+    if (position.length < 5 || distance.length < 5){
         document.getElementById("status").innerHTML = "Not enough data! Try again."
-    }
-
-    // writing position data to arrays
-    const xValues = [];
-    const yValues = [];
-    const zValues = [];
-    for (let i = 0; i < distance.length; i++) {
-        if(distance[i] && position[i][0] && position[i][1]) {
-            const coords = calculatePosition(position[i], distance[i]);
-            xValues.push(coords[0]);
-            yValues.push(coords[1]);
-            zValues.push(coords[2]);
+    } else {
+        // writing position data to arrays
+        const xValues = [];
+        const yValues = [];
+        const zValues = [];
+        for (let i = 0; i < distance.length; i++) {
+            if(distance[i] && position[i][0] && position[i][1]) {
+                const coords = calculatePosition(position[i], distance[i]);
+                xValues.push(coords[0]);
+                yValues.push(coords[1]);
+                zValues.push(coords[2]);
+            }
         }
-    }
 
-    // displaying 3d plot with plotly
-    const data = [{
-        x: xValues,
-        y: yValues,
-        z: zValues,
-        mode: "markers",
-        marker: {
-            size: 5,
-        },
-        type: "scatter3d"
-    }];
-    const layout = {
-        title: {
-            text: "Scanned Location Data"
-        }
-    };
-    Plotly.newPlot('plot', data, layout);
+        // displaying 3d plot with plotly
+        const data = [{
+            x: xValues,
+            y: yValues,
+            z: zValues,
+            mode: "markers",
+            marker: {
+                size: 5,
+            },
+            type: "scatter3d"
+        }];
+        const layout = {
+            title: {
+                text: "Scanned Location Data"
+            }
+        };
+        Plotly.newPlot('plot', data, layout);
+    }
 }
