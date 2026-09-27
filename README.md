@@ -1,2 +1,4 @@
 # pie-mp2-scanner
-Repository for 2.5D Scanner for Olin College's Principles of Integrated Engineering course
+Contains the code for the second mini-project of Olin College's Principles of Integrated Engineering course: The 2.5D Scanner. The scanner uses a pan-tilt mechanism to scan an object left-to-right and bottom-to-top, eventually creating a plot that should show the locations of each scanned point, creating a graphical representation of the scanned object.  
+
+The servos and the scanner output are handled in the Arduino code, the conversion of spherical to cartesian coordinates and the creation of the plot is handled in the JavaScript script, and the website and digital user interface are handled with html and css.
