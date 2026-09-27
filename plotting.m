@@ -25,8 +25,10 @@ scatter(ds, Vs, 25, 'r', 'filled', DisplayName="Measured calibration points")
 hold on;
 fplot(@(d)m*(1/d)+b, [0 150], '--b', DisplayName="Fitted function V(d)=m*(1/d)+b")
 ylim([0 1023])
-xlabel("distance (cm)")
+xlabel("Distance (cm)")
 ylabel("Voltage (ADC counts)")
 title("Measured voltage against true distance")
 legend;
+ax = gca;
+ax.FontSize = 16;
 exportgraphics(gca, "./calib_plot.png")
