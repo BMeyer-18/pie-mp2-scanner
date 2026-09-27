@@ -1,18 +1,23 @@
-// script.js: Read serial data from Arduino and display plots
+// script.js: Reads serial data from Arduino, displays plot
 
 // global variables
 let port; // serial port object
 let reader; // stream reader for serial data
-let position = []; // store position data as array of arrays (pan, tilt)
-let distance = []; // store distance data as list of floats
+let position = []; // stores position data as array of arrays (pan, tilt)
+let distance = []; // stores distance data as list of floats
 
-// set up event listners to connect to arduino on page load
+// sets up event listners to connect to arduino on page load
 window.addEventListener('DOMContentLoaded', () => {
     document.getElementById("start").addEventListener('click', connectToArduino);
     document.getElementById("stop").addEventListener('click', disconnectFromArduino);
 });
 
-// connect to Arduino with web serial api
+
+/**
+ * Uses web serial API to connect to the Arduino and reset all data variables.
+ * Once connection is established, begins data collection.
+ * If connection fails, displays the error on the site.
+ */
 async function connectToArduino() {
     const statusText = document.getElementById("status");
     try {
@@ -33,14 +38,23 @@ async function connectToArduino() {
     }
 }
 
-// disconnect from Arduino
+/**
+ * Disconnects from the arduino when the "disconnect" button is pressed.
+ */
 async function disconnectFromArduino() {
     if (reader) {
         await reader.cancel(); // stop reading data
     }
 }
 
-// CONTINUOUSLY read and interpret data from serial port
+/**
+ * Continuously reads data from Arduino serial port using a text decoder stream until disconnect.
+ * For each completed line, if it begins with a "!", display it on the site for debugging purposes.
+ * If it's a comma-separated list with 3 items, it's readable data to be processed as spherical
+ * location and distance coordinates. If the recorded distance is >100cm or <0cm, throw out the data.
+ * If it doesn't fall into any of the above criteria, it displays on the site as a status update.
+ * On disconnect, calls the function that plots the recorded data.
+ */
 async function readSerialData() {
     // create text decoder to convert binary data to string data
     const decoder = new TextDecoderStream();
@@ -57,9 +71,7 @@ async function readSerialData() {
     while (true) {
         const {value, done} = await reader.read();
         if (done) {
-            // we disconnected
-            // plot the data that we have
-            // update UI
+            // plot data and update UI on disconnect
             plotSensorData();
             statusText.innerHTML = "disconnected";
             break;
@@ -97,7 +109,13 @@ async function readSerialData() {
     }
 }
 
-// use angle and distance readings to calculate coordinates
+/**
+ * Uses spherical angle and distance readings to calculate XYZ coordinates.
+ * Converts angles to radians and uses 3D rotation matrices to find points.
+ * @param {Array<Int>} angles contains the pan and tilt angles as a 2-element array
+ * @param {Double} distance contains the distance read from the IR sensor, in cm
+ * @returns {Array<Double>} 3-element array of doubles with XYZ coordinates in order
+ */
 function calculatePosition(angles, distance) {
     const anglesRadians = [];
     angles.forEach(angle => anglesRadians.push(angle*Math.PI/180));
@@ -110,7 +128,10 @@ function calculatePosition(angles, distance) {
     return [x,y,z];
 }
 
-// plot graph of data using plotly.js
+/**
+ * Plots a 3D graph of the data in XYZ coordinates after converting radian data to XYZ
+ * coordinates using the plotly.js library.
+ */
 function plotSensorData() {
     // check that we have enough data
     if (position.length < 5 || distance.length < 5){
