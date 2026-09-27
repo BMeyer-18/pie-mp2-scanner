@@ -1,3 +1,4 @@
+% calibration error plot
 data = table2array(readtable('./distance_error.csv'));
 actual = data(:,1); predicted = data(:,2);
 
@@ -13,3 +14,19 @@ ylabel('Distance (cm)')
 title('Error Plot of Recorded Distances')
 legend('Actual Distance', 'Predicted Distance', Location='northwest')
 exportgraphics(gca, "./error_plot.png")
+
+% transfer function V(d) plot
+figure;
+ds = [30 60];
+Vs = [363 186];
+m=10620;
+b=9;
+scatter(ds, Vs, 25, 'r', 'filled', DisplayName="Measured calibration points")
+hold on;
+fplot(@(d)m*(1/d)+b, [0 150], '--b', DisplayName="Fitted function V(d)=m*(1/d)+b")
+ylim([0 1023])
+xlabel("distance (cm)")
+ylabel("Voltage (ADC counts)")
+title("Measured voltage against true distance")
+legend;
+exportgraphics(gca, "./calib_plot.png")
